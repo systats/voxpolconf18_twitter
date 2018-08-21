@@ -157,7 +157,7 @@ rt %>%
   ggtitle("Number of Tweets by Day and Hour")
 ```
 
-![](scrape_tweets_files/figure-markdown_github/unnamed-chunk-4-1.png)
+![](Readme_files/figure-markdown_github/unnamed-chunk-4-1.png)
 
 Retweet Network
 ---------------
@@ -200,7 +200,7 @@ rt_graph %>%
   ggtitle("#VOXPolConf18 Tweets and Retweets")
 ```
 
-![](scrape_tweets_files/figure-markdown_github/unnamed-chunk-5-1.png)
+![](Readme_files/figure-markdown_github/unnamed-chunk-5-1.png)
 
 Most Frequent Hashtags
 ----------------------
@@ -230,7 +230,7 @@ rt_hashtags %>%
   ggtitle("Most Frequent Hastags related to #voxpolconf18")
 ```
 
-![](scrape_tweets_files/figure-markdown_github/unnamed-chunk-6-1.png)
+![](Readme_files/figure-markdown_github/unnamed-chunk-6-1.png)
 
 Most Frequent Bigram Network
 ----------------------------
@@ -278,7 +278,7 @@ gg_bigram %>%
   ggtitle("Top Bigram Network form Tweets using hashtag #VOXPolConf18")
 ```
 
-![](scrape_tweets_files/figure-markdown_github/unnamed-chunk-8-1.png)
+![](Readme_files/figure-markdown_github/unnamed-chunk-8-1.png)
 
 ``` r
 sessionInfo()
