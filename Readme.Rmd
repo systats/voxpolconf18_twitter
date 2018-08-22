@@ -202,7 +202,7 @@ gg_bigram %>%
   geom_node_text(aes(label = name),  repel = TRUE) +
   theme_void() +
   scale_edge_alpha("", range = c(0.3, .6)) +
-  ggtitle("Top Bigram Network form Tweets using hashtag #VOXPolConf18")
+  ggtitle("Top Bigram Network from Tweets using hashtag #VOXPolConf18")
 ```
 
 
