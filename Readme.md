@@ -3,6 +3,9 @@ Vox-Pol Conf Twitter Analysis
 Simon
 2018-08-21
 
+<!-- After all the interesting extremism research at #voxpolconf18 it's time to talk about the E X T R E M E L Y nice @VOX_Pol Twitter community. Here is some #dataviz about the conference tweets, enjoy :)  -->
+<!-- Code: https://github.com/systats/voxpolconf18_twitter  -->
+<!-- #rstats #ggraph @FabioFavusMaxim  -->
 This is a short notebook scraping tweets related to the Vox-Pol Conference 2018 in Amsterdam. As this was again a very inspiring Vox-Pol event I thought it was time to further explore the twitter community.
 
 Packages
@@ -13,6 +16,7 @@ Load the necessary packages
 ``` r
 # install pacman once if not avaible on your machine
 # install.packages("pacman")
+#devtools::install_github("sy")
 pacman::p_load(tidyverse, purrr, tidyr, rtweet, stringr, ggraph, igraph, tidygraph, forcats)
 ```
 
@@ -24,7 +28,6 @@ Call Twitter API. If you want to scrape data yourself you have to register a fre
 ``` r
 twitter_token <- readRDS("twitter_token.rds")
 
-## search for 18000 tweets using the rstats hashtag
 rt <- search_tweets(
   "#VOXPolConf18 OR #VOXPolConf2018", n = 2000, include_rts = T, retryonratelimit = T
 )
@@ -34,100 +37,95 @@ save(rt, file = "rt.Rdata")
 Lets first look at the data structure and column names. Twitter returns a huge amount of data.
 
 ``` r
-load("rt.Rdata")
-rt %>% 
-  glimpse
+rt %>% glimpse # the same as str, returns a df overview
 ```
 
-    ## Observations: 1,153
-    ## Variables: 87
-    ## $ user_id                 <chr> "158952098", "4785928097", "8264655259...
-    ## $ status_id               <chr> "1028662031900192769", "10286657265660...
-    ## $ created_at              <dttm> 2018-08-12 15:18:34, 2018-08-12 15:33...
-    ## $ screen_name             <chr> "derekcrim", "WojKaczkowski", "Heartof...
-    ## $ text                    <chr> "RT @VOX_Pol: ICYMI, revised programme...
-    ## $ source                  <chr> "Twitter for iPhone", "Twitter for And...
-    ## $ display_text_width      <dbl> 140, 140, 140, 279, 140, 140, 140, 140...
-    ## $ reply_to_status_id      <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ reply_to_user_id        <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ reply_to_screen_name    <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ is_quote                <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FAL...
-    ## $ is_retweet              <lgl> TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, T...
-    ## $ favorite_count          <int> 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 0, 20, 0...
-    ## $ retweet_count           <int> 15, 8, 15, 3, 3, 3, 3, 15, 2, 2, 2, 7,...
-    ## $ hashtags                <list> ["voxpolconf18", "voxpolconf18", "vox...
-    ## $ symbols                 <list> [NA, NA, NA, NA, NA, NA, NA, NA, NA, ...
-    ## $ urls_url                <list> ["voxpol.eu/wp-content/upl…", NA, "vo...
-    ## $ urls_t.co               <list> ["https://t.co/oXMCT4g5zj", NA, "http...
-    ## $ urls_expanded_url       <list> ["https://www.voxpol.eu/wp-content/up...
-    ## $ media_url               <list> [NA, NA, NA, "http://pbs.twimg.com/me...
-    ## $ media_t.co              <list> [NA, NA, NA, "https://t.co/ufAVloDGAO...
-    ## $ media_expanded_url      <list> [NA, NA, NA, "https://twitter.com/VOX...
-    ## $ media_type              <list> [NA, NA, NA, "photo", NA, NA, NA, NA,...
-    ## $ ext_media_url           <list> [NA, NA, NA, "http://pbs.twimg.com/me...
-    ## $ ext_media_t.co          <list> [NA, NA, NA, "https://t.co/ufAVloDGAO...
-    ## $ ext_media_expanded_url  <list> [NA, NA, NA, "https://twitter.com/VOX...
-    ## $ ext_media_type          <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ mentions_user_id        <list> ["2340767688", <"413366295", "2340767...
-    ## $ mentions_screen_name    <list> ["VOX_Pol", <"cldaymon", "VOX_Pol">, ...
-    ## $ lang                    <chr> "en", "en", "en", "en", "en", "en", "e...
-    ## $ quoted_status_id        <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ quoted_text             <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ quoted_created_at       <dttm> NA, NA, NA, NA, NA, NA, NA, NA, NA, N...
-    ## $ quoted_source           <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ quoted_favorite_count   <int> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ quoted_retweet_count    <int> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ quoted_user_id          <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ quoted_screen_name      <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ quoted_name             <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ quoted_followers_count  <int> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ quoted_friends_count    <int> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ quoted_statuses_count   <int> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ quoted_location         <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ quoted_description      <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ quoted_verified         <lgl> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ retweet_status_id       <chr> "1027835283415478272", "10276542038529...
-    ## $ retweet_text            <chr> "ICYMI, revised programme for #voxpolc...
-    ## $ retweet_created_at      <dttm> 2018-08-10 08:33:22, 2018-08-09 20:33...
-    ## $ retweet_source          <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ retweet_favorite_count  <int> 10, 26, 10, NA, 3, 3, 3, 10, NA, 4, 4,...
-    ## $ retweet_retweet_count   <int> 15, 8, 15, NA, 3, 3, 3, 15, NA, 2, 2, ...
-    ## $ retweet_user_id         <chr> "2340767688", "413366295", "2340767688...
-    ## $ retweet_screen_name     <chr> "VOX_Pol", "cldaymon", "VOX_Pol", NA, ...
-    ## $ retweet_name            <chr> "VOX-Pol", "Chelsea Daymon", "VOX-Pol"...
-    ## $ retweet_followers_count <int> 3084, 1680, 3084, NA, 3084, 3084, 3084...
-    ## $ retweet_friends_count   <int> 88, 1210, 88, NA, 88, 88, 88, 88, NA, ...
-    ## $ retweet_statuses_count  <int> 3470, 7997, 3470, NA, 3470, 3470, 3470...
-    ## $ retweet_location        <chr> "", "Somewhere out there...", "", NA, ...
-    ## $ retweet_description     <chr> "We're a EU FP7-funded academic networ...
-    ## $ retweet_verified        <lgl> FALSE, FALSE, FALSE, NA, FALSE, FALSE,...
-    ## $ place_url               <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ place_name              <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ place_full_name         <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ place_type              <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ country                 <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ country_code            <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA...
-    ## $ geo_coords              <list> [<NA, NA>, <NA, NA>, <NA, NA>, <NA, N...
-    ## $ coords_coords           <list> [<NA, NA>, <NA, NA>, <NA, NA>, <NA, N...
-    ## $ bbox_coords             <list> [<NA, NA, NA, NA, NA, NA, NA, NA>, <N...
-    ## $ name                    <chr> "Derek Silva", "Wojciech Kaczkowski", ...
-    ## $ location                <chr> "London, Ontario", "Decatur, GA", "", ...
-    ## $ description             <chr> "Assistant Professor of Criminology @k...
-    ## $ url                     <chr> "https://t.co/cU5LSgtqwV", NA, "https:...
-    ## $ protected               <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FAL...
-    ## $ followers_count         <int> 4462, 93, 66, 3084, 433, 964, 317, 376...
-    ## $ friends_count           <int> 3836, 73, 105, 88, 1455, 311, 630, 298...
-    ## $ listed_count            <int> 39, 2, 1, 86, 3, 26, 153, 140, 86, 178...
-    ## $ statuses_count          <int> 1764, 80, 420, 3470, 3298, 3393, 17555...
-    ## $ favourites_count        <int> 2867, 148, 246, 259, 1836, 3267, 3516,...
-    ## $ account_created_at      <dttm> 2010-06-24 02:32:24, 2016-01-12 16:50...
-    ## $ verified                <lgl> FALSE, FALSE, FALSE, FALSE, FALSE, FAL...
-    ## $ profile_url             <chr> "https://t.co/cU5LSgtqwV", NA, "https:...
-    ## $ profile_expanded_url    <chr> "http://www.dereksilva.org", NA, "http...
-    ## $ account_lang            <chr> "en", "en", "it", "en", "en-gb", "en",...
-    ## $ profile_banner_url      <chr> "https://pbs.twimg.com/profile_banners...
-    ## $ profile_background_url  <chr> "http://abs.twimg.com/images/themes/th...
-    ## $ profile_image_url       <chr> "http://pbs.twimg.com/profile_images/8...
+    ## function (n, df, ncp)
+
+The top ten retweeted tweets.
+
+``` r
+load("rt.Rdata")
+rt %>% 
+  select(screen_name, text, retweet_count) %>% 
+  filter(!str_detect(text, "^RT")) %>% 
+  mutate(text = str_replace_all(text, "\\\n", " ")) %>% 
+  arrange(desc(retweet_count)) %>% 
+  top_n(n = 10) %>% 
+  knitr::kable(., format = "markdown")
+```
+
+<table style="width:100%;">
+<colgroup>
+<col width="5%" />
+<col width="90%" />
+<col width="4%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">screen_name</th>
+<th align="left">text</th>
+<th align="right">retweet_count</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">MubarazAhmed</td>
+<td align="left">ISIS jihadis remain keen on returning to mainstream social media platforms for recruitment purposes, don’t just want to be talking to each other on Telegram, says <span class="citation">@AmarAmarasingam</span>. #voxpolconf18 <a href="https://t.co/JwQLqakmF6" class="uri">https://t.co/JwQLqakmF6</a></td>
+<td align="right">28</td>
+</tr>
+<tr class="even">
+<td align="left">intelwire</td>
+<td align="left">It's happening!!! #voxpolconf18 <a href="https://t.co/XV7nWCG6vN" class="uri">https://t.co/XV7nWCG6vN</a></td>
+<td align="right">21</td>
+</tr>
+<tr class="odd">
+<td align="left">MubarazAhmed</td>
+<td align="left">Fascinating findings presented by ⁦<span class="citation">@AmarAmarasingam</span>⁩ on languages used in Telegram communications by jihadi groups. Arabic remains integral to ISIS on Telegram, but there is also a surprisingly high level of activity in Persian. Cc: ⁦<span class="citation">@KasraAarabi</span>⁩ #voxpolconf18 <a href="https://t.co/7YVFUr2WBD" class="uri">https://t.co/7YVFUr2WBD</a></td>
+<td align="right">19</td>
+</tr>
+<tr class="even">
+<td align="left">FabioFavusMaxim</td>
+<td align="left">Very excited to have presented our research on the Alt-Right with <span class="citation">@systatz</span> at #voxpolconf2018. Received some great suggestions by <span class="citation">@miriam_fs</span>. to improve our analysis, which is definitely something we'll implement. You can check out our slides here: <a href="https://t.co/uGV7es8VhF" class="uri">https://t.co/uGV7es8VhF</a> <a href="https://t.co/pz3113fPZN" class="uri">https://t.co/pz3113fPZN</a></td>
+<td align="right">19</td>
+</tr>
+<tr class="odd">
+<td align="left">VOX_Pol</td>
+<td align="left">We look forward to seeing many of you in Amsterdam next week for #voxpolconf18. Most up-to-date version of the Conference Programme is at <a href="https://t.co/SLzRsN2y6E" class="uri">https://t.co/SLzRsN2y6E</a> and also below. <a href="https://t.co/aw5IdEWcRD" class="uri">https://t.co/aw5IdEWcRD</a></td>
+<td align="right">17</td>
+</tr>
+<tr class="even">
+<td align="left">ErinSaltman</td>
+<td align="left">Present &amp; future trends within violent extremism &amp; terrorism; new tech, new tactics, old problems, old groups. Pleasure &amp; privilege to share panel discussion with <span class="citation">@intelwire</span> <span class="citation">@techvsterrorism</span> <span class="citation">@p_vanostaeyen</span> moderated by <span class="citation">@VOX_Pol</span> <span class="citation">@galwaygrrl</span>. Big Qs at #voxpolconf18 !! <a href="https://t.co/fBnlrEe4c2" class="uri">https://t.co/fBnlrEe4c2</a></td>
+<td align="right">17</td>
+</tr>
+<tr class="odd">
+<td align="left">lizzypearson</td>
+<td align="left">Really looking forward to <span class="citation">@VOX_Pol</span> Amsterdam conference where I'm talking UK Islamist offline reflections on online. Plus! seeing presentations by <span class="citation">@Swansea_Law</span> colleagues <span class="citation">@CTProject_JW</span> on online Jihadism in the US and <span class="citation">@CTP_ALW</span> on Britain First imagery in the UK #voxpolconf18 <a href="https://t.co/vGDsJgZM4I" class="uri">https://t.co/vGDsJgZM4I</a></td>
+<td align="right">15</td>
+</tr>
+<tr class="even">
+<td align="left">AmarAmarasingam</td>
+<td align="left">Day 2: <span class="citation">@pieternanninga</span> talks about the dramatic drop in ISIS video releases from 2015 to 2018. #VOXpolconf18 <a href="https://t.co/ipJYXzXIUI" class="uri">https://t.co/ipJYXzXIUI</a></td>
+<td align="right">14</td>
+</tr>
+<tr class="odd">
+<td align="left">MoignKhawaja</td>
+<td align="left">.<span class="citation">@AmarAmarasingam</span> giving a very interesting presentation on how jihadists are using <span class="citation">@telegram</span> as a platform for various purposes including propaganda dissemination here at .⁦<span class="citation">@VOX_Pol</span>⁩ #VOXPolConf2018 day 1 session 2 chaired by ⁦<span class="citation">@galwaygrrl</span>⁩ <a href="https://t.co/NOLTPDUn1G" class="uri">https://t.co/NOLTPDUn1G</a></td>
+<td align="right">13</td>
+</tr>
+<tr class="even">
+<td align="left">Drjohnhorgan</td>
+<td align="left">Follow #VoxPolConf18 this week to learn about new research on terrorism, extremism and everything in between</td>
+<td align="right">13</td>
+</tr>
+<tr class="odd">
+<td align="left">MiloComerford</td>
+<td align="left">Important corrective on online extremism from <span class="citation">@MubarazAhmed</span>’s research at #VOXPolConf18 - large proportion of traffic to extremist websites comes from searches, not social media. <span class="citation">@VOX_Pol</span> <a href="https://t.co/JVGIXouaa4" class="uri">https://t.co/JVGIXouaa4</a></td>
+<td align="right">13</td>
+</tr>
+</tbody>
+</table>
 
 Timeline
 --------
@@ -152,12 +150,12 @@ rt %>%
   ggplot(aes(hour, n)) +
   geom_line() +
   ## split the visualization 
-  facet_wrap(~cdate, nrow = 3) +
+  facet_wrap(~cdate, ncol = 2) +
   theme_minimal() +
   ggtitle("Number of Tweets by Day and Hour")
 ```
 
-![](Readme_files/figure-markdown_github/unnamed-chunk-4-1.png)
+![](Readme_files/figure-markdown_github/unnamed-chunk-5-1.png)
 
 Retweet Network
 ---------------
@@ -185,13 +183,14 @@ rt_graph %>%
   ## create graph layout
   ggraph(layout = "kk") + 
   ## define edge aestetics
-  geom_edge_link(aes(alpha = n, edge_width = n), show.legend = FALSE) + 
+  geom_edge_fan(aes(alpha = n, edge_width = n, color = n)) + 
   ## scale down link saturation
-  scale_edge_alpha(range = c(.1, .7)) +
+  scale_edge_alpha(range = c(.5, .9)) +
   ## define note size param
-  geom_node_point(aes(size = popularity)) +
+  scale_edge_color_gradient(low = "gray50", high = "#1874CD") +
+  geom_node_point(aes(size = popularity), color = "gray30") +
   ## define node labels
-  geom_node_text(aes(label = name), repel = T) +
+  geom_node_text(aes(label = name), repel = T, fontface = "bold") +
   ## equal width and height
   coord_fixed() +
   ## plain theme
@@ -200,7 +199,7 @@ rt_graph %>%
   ggtitle("#VOXPolConf18 Tweets and Retweets")
 ```
 
-![](Readme_files/figure-markdown_github/unnamed-chunk-5-1.png)
+![](Readme_files/figure-markdown_github/unnamed-chunk-6-1.png)
 
 Most Frequent Hashtags
 ----------------------
@@ -230,7 +229,7 @@ rt_hashtags %>%
   ggtitle("Most Frequent Hastags related to #voxpolconf18")
 ```
 
-![](Readme_files/figure-markdown_github/unnamed-chunk-6-1.png)
+![](Readme_files/figure-markdown_github/unnamed-chunk-7-1.png)
 
 Most Frequent Bigram Network
 ----------------------------
@@ -248,7 +247,7 @@ gg_bigram <- rt %>%
   ## split text into words
   tidytext::unnest_tokens(word, text, token = "words") %>% 
   ## remove stop words
-  anti_join(tidyTX::stop_words_en) %>% 
+  anti_join(tidytext::stop_words) %>% 
   ## paste words to text by id
   group_by(id) %>% 
   summarise(text = paste(word, collapse = " ")) %>% 
@@ -259,7 +258,7 @@ gg_bigram <- rt %>%
   ## count bigrams
   count(word1, word2, sort = T) %>% 
   ## select first 90
-  slice(1:90) %>% 
+  slice(1:100) %>% 
   drop_na() %>%
   ## create tidy graph object
   as_tbl_graph() %>% 
@@ -278,7 +277,7 @@ gg_bigram %>%
   ggtitle("Top Bigram Network form Tweets using hashtag #VOXPolConf18")
 ```
 
-![](Readme_files/figure-markdown_github/unnamed-chunk-8-1.png)
+![](Readme_files/figure-markdown_github/unnamed-chunk-9-1.png)
 
 ``` r
 sessionInfo()
@@ -311,21 +310,21 @@ sessionInfo()
     ##  [7] rprojroot_1.3-2   digest_0.6.15     psych_1.8.4      
     ## [10] ggforce_0.1.1     R6_2.2.2          cellranger_1.1.0 
     ## [13] plyr_1.8.4        backports_1.1.2   evaluate_0.10.1  
-    ## [16] httr_1.3.1        pillar_1.2.3      rlang_0.2.1      
-    ## [19] lazyeval_0.2.1    readxl_1.1.0      rstudioapi_0.7   
-    ## [22] Matrix_1.2-14     rmarkdown_1.9     labeling_0.3     
-    ## [25] tidytext_0.1.8    foreign_0.8-70    polyclip_1.9-1   
-    ## [28] munsell_0.5.0     broom_0.4.5       janeaustenr_0.1.5
-    ## [31] compiler_3.5.0    modelr_0.1.2      pkgconfig_2.0.1  
-    ## [34] mnormt_1.5-5      htmltools_0.3.6   openssl_1.0.1    
-    ## [37] tidyselect_0.2.4  gridExtra_2.3     viridisLite_0.3.0
-    ## [40] crayon_1.3.4      withr_2.1.2       SnowballC_0.5.1  
-    ## [43] MASS_7.3-49       grid_3.5.0        nlme_3.1-137     
-    ## [46] jsonlite_1.5      gtable_0.2.0      pacman_0.4.6     
-    ## [49] magrittr_1.5      concaveman_1.0.0  tokenizers_0.2.1 
-    ## [52] scales_1.0.0      cli_1.0.0         stringi_1.2.4    
-    ## [55] farver_1.0        reshape2_1.4.3    viridis_0.5.1    
-    ## [58] tidyTX_0.1.0      xml2_1.2.0        tools_3.5.0      
+    ## [16] highr_0.6         httr_1.3.1        pillar_1.2.3     
+    ## [19] rlang_0.2.1       lazyeval_0.2.1    readxl_1.1.0     
+    ## [22] rstudioapi_0.7    Matrix_1.2-14     rmarkdown_1.9    
+    ## [25] labeling_0.3      tidytext_0.1.8    foreign_0.8-70   
+    ## [28] polyclip_1.9-1    munsell_0.5.0     broom_0.4.5      
+    ## [31] janeaustenr_0.1.5 compiler_3.5.0    modelr_0.1.2     
+    ## [34] pkgconfig_2.0.1   mnormt_1.5-5      htmltools_0.3.6  
+    ## [37] openssl_1.0.1     tidyselect_0.2.4  gridExtra_2.3    
+    ## [40] viridisLite_0.3.0 crayon_1.3.4      withr_2.1.2      
+    ## [43] SnowballC_0.5.1   MASS_7.3-49       grid_3.5.0       
+    ## [46] nlme_3.1-137      jsonlite_1.5      gtable_0.2.0     
+    ## [49] pacman_0.4.6      magrittr_1.5      concaveman_1.0.0 
+    ## [52] tokenizers_0.2.1  scales_1.0.0      cli_1.0.0        
+    ## [55] stringi_1.2.4     farver_1.0        reshape2_1.4.3   
+    ## [58] viridis_0.5.1     xml2_1.2.0        tools_3.5.0      
     ## [61] glue_1.3.0        tweenr_0.1.5.9999 hms_0.4.2        
     ## [64] parallel_3.5.0    yaml_2.1.19       colorspace_1.3-2 
     ## [67] rvest_0.3.2       knitr_1.20        bindr_0.1.1      

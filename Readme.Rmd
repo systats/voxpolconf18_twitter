@@ -5,6 +5,10 @@ date: "2018-08-21"
 output: github_document
 ---
 
+<!-- After all the interesting extremism research at #voxpolconf18 it's time to talk about the E X T R E M E L Y nice @VOX_Pol Twitter community. Here is some #dataviz about the conference tweets, enjoy :)  -->
+<!-- Code: https://github.com/systats/voxpolconf18_twitter  -->
+<!-- #rstats #ggraph @FabioFavusMaxim  -->
+
 This is a short notebook scraping tweets related to the Vox-Pol Conference 2018 in Amsterdam. As this was again a very inspiring Vox-Pol event I thought it was time to further explore the twitter community. 
 
 ```{r setup, include=FALSE}
@@ -19,6 +23,7 @@ Load the necessary packages
 ```{r}
 # install pacman once if not avaible on your machine
 # install.packages("pacman")
+#devtools::install_github("sy")
 pacman::p_load(tidyverse, purrr, tidyr, rtweet, stringr, ggraph, igraph, tidygraph, forcats)
 ```
 
@@ -30,7 +35,6 @@ Call Twitter API. If you want to scrape data yourself you have to register a fre
 ```{r, eval = F}
 twitter_token <- readRDS("twitter_token.rds")
 
-## search for 18000 tweets using the rstats hashtag
 rt <- search_tweets(
   "#VOXPolConf18 OR #VOXPolConf2018", n = 2000, include_rts = T, retryonratelimit = T
 )
@@ -40,9 +44,21 @@ save(rt, file = "rt.Rdata")
 Lets first look at the data structure and column names. Twitter returns a huge amount of data.
 
 ```{r}
+rt %>% glimpse # the same as str, returns a df overview
+```
+
+
+The top ten retweeted tweets.
+
+```{r, results="asis"}
 load("rt.Rdata")
 rt %>% 
-  glimpse
+  select(screen_name, text, retweet_count) %>% 
+  filter(!str_detect(text, "^RT")) %>% 
+  mutate(text = str_replace_all(text, "\\\n", " ")) %>% 
+  arrange(desc(retweet_count)) %>% 
+  top_n(n = 10) %>% 
+  knitr::kable(., format = "markdown")
 ```
 
 
@@ -68,7 +84,7 @@ rt %>%
   ggplot(aes(hour, n)) +
   geom_line() +
   ## split the visualization 
-  facet_wrap(~cdate, nrow = 3) +
+  facet_wrap(~cdate, ncol = 2) +
   theme_minimal() +
   ggtitle("Number of Tweets by Day and Hour")
 ```
@@ -76,7 +92,7 @@ rt %>%
 
 ## Retweet Network
 
-```{r, fig.width = 10, fig.height=10}
+```{r, fig.width = 15, fig.height=15}
 rt_graph <- rt %>% 
   ## select relevant variables
   dplyr::select(screen_name, mentions_screen_name) %>% 
@@ -99,13 +115,14 @@ rt_graph %>%
   ## create graph layout
   ggraph(layout = "kk") + 
   ## define edge aestetics
-  geom_edge_link(aes(alpha = n, edge_width = n), show.legend = FALSE) + 
+  geom_edge_fan(aes(alpha = n, edge_width = n, color = n)) + 
   ## scale down link saturation
-  scale_edge_alpha(range = c(.1, .7)) +
+  scale_edge_alpha(range = c(.5, .9)) +
   ## define note size param
-  geom_node_point(aes(size = popularity)) +
+  scale_edge_color_gradient(low = "gray50", high = "#1874CD") +
+  geom_node_point(aes(size = popularity), color = "gray30") +
   ## define node labels
-  geom_node_text(aes(label = name), repel = T) +
+  geom_node_text(aes(label = name), repel = T, fontface = "bold") +
   ## equal width and height
   coord_fixed() +
   ## plain theme
@@ -157,7 +174,7 @@ gg_bigram <- rt %>%
   ## split text into words
   tidytext::unnest_tokens(word, text, token = "words") %>% 
   ## remove stop words
-  anti_join(tidyTX::stop_words_en) %>% 
+  anti_join(tidytext::stop_words) %>% 
   ## paste words to text by id
   group_by(id) %>% 
   summarise(text = paste(word, collapse = " ")) %>% 
@@ -168,7 +185,7 @@ gg_bigram <- rt %>%
   ## count bigrams
   count(word1, word2, sort = T) %>% 
   ## select first 90
-  slice(1:90) %>% 
+  slice(1:100) %>% 
   drop_na() %>%
   ## create tidy graph object
   as_tbl_graph() %>% 
